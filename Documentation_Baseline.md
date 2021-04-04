@@ -11,12 +11,11 @@ Model is tested on [VoxConverse][voxconverse] dataset
 
 ## API Documentation
 ### Index
-- [class DiarizationDataset](diarizationdataset)
-  - [\_\_getitem\_\_](getitem)
+- [class DiarizationDataset](#diarizationdataset)
+  - [\_\_getitem\_\_](#getitem)
 
 
-<a name = 'diarizationdataset'></a>
-### class DiarizationDataset()
+### <a name = 'diarizationdataset'></a> class DiarizationDataset()
 ```sh
 class DiarizationDataset(root_dir='./audio/', 
                  label_dir='./voxconverse/dev/',
@@ -49,8 +48,7 @@ Argument                        | Detail
 
 **Class Functions:**
 
-<a name = 'getitem'></a>
-**\_\_getitem\_\_:**
+1. <a name = 'getitem'></a> **\_\_getitem\_\_:**
 ```def __getitem__(self, idx)```
 
 **Parameters:**
