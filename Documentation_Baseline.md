@@ -4,7 +4,7 @@ The Baseline model for speaker diarization uses PyTorch based [Silero-VAD][vad] 
 feature extraction. Spectral clustering is used for audio-label assignment.
 
 ## DataSet
-Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We split the dataset into two parts: ‘test’ and ‘train’ with ‘test data having 50 data points.
+Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files.
 
 ## Tutorial
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1D23rxcCqZe78hUeJORv5nu8efTUMifws)
@@ -99,7 +99,7 @@ Argument                        | Detail
 `out_dir:`                      |  _str_, Directory where the output RTTM diarization files to be saved
 `name:`                         |  _str_, name for the audio files for which diarization was predicted
 `labels:`                       |  _int_, Speaker/ Non-speech labels assigned to different audio segments based on the win\_step used to extract feature vectors
-`win_step:`                     |  _int_, Step (in milliseconds) between two windows of audio segments used for feature extraction
+`win_step:`                     |  _int_, Step (in ms) between two windows of audio segments used for feature extraction
 
 **Returns:**
 Variable                        | Detail
@@ -124,7 +124,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------------- | ------------
-`metric:`                       |  _pyannote.metrics_, Pyannote metric class having diarization DER's for all the files.
+`metric:`                       |  _pyannote.metrics_, Pyannote metric class having diarization DERs for all the files.
 
 ---
 ### <a name = 'diarizationOracleNumSpkrs'></a> def diarizationOracleNumSpkrs()
