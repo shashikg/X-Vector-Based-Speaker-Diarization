@@ -4,7 +4,7 @@ The Baseline model for speaker diarization uses PyTorch based [Silero-VAD][vad] 
 feature extraction. Spectral clustering is used for audio-label assignment.
 
 ## DataSet
-Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We split the dataset into two parts: ‘test’ and ‘train’ with ‘test data having 50 data points.
+Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files.
 
 ## Tutorial
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1D23rxcCqZe78hUeJORv5nu8efTUMifws)
@@ -20,7 +20,8 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
 - [func diarizationEigenGapNumSpkrs](#diarizationEigenGapNumSpkrs)
 
 ---
-### <a name = 'diarizationdataset'></a> class DiarizationDataset()
+### <a name = 'diarizationdataset'></a> class DiarizationDataset() 
+_Defined in utils.py_
 ```sh
 class DiarizationDataset(root_dir='./audio/', 
                  label_dir='./voxconverse/dev/',
@@ -88,6 +89,7 @@ Variable                        | Detail
 ```sh
 def make_rttm(out_dir, name, labels, win_step):
 ```
+_Defined in utils.py_
 
 Create RTTM Diarization files for non-overlapping speaker labels in var `labels`. Assumes non-speech part to have value `-1` and speech part to have some speaker label `(0, 1, 2, ...)`.
 
@@ -97,7 +99,7 @@ Argument                        | Detail
 `out_dir:`                      |  _str_, Directory where the output RTTM diarization files to be saved
 `name:`                         |  _str_, name for the audio files for which diarization was predicted
 `labels:`                       |  _int_, Speaker/ Non-speech labels assigned to different audio segments based on the win\_step used to extract feature vectors
-`win_step:`                     |  _int_, Step (in milliseconds) between two windows of audio segments used for feature extraction
+`win_step:`                     |  _int_, Step (in ms) between two windows of audio segments used for feature extraction
 
 **Returns:**
 Variable                        | Detail
@@ -109,6 +111,7 @@ Variable                        | Detail
 ```sh
 def get_metrics(groundtruth_path, hypothesis_path):
 ```
+_Defined in utils.py_
 
 Evaluate the diarization results of all the predicted RTTM files present in hypothesis directory to the grountruth RTTM files present in groundtruth directory.
 
@@ -121,13 +124,14 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------------- | ------------
-`metric:`                       |  _pyannote.metrics_, Pyannote metric class having diarization DER's for all the files.
+`metric:`                       |  _pyannote.metrics_, Pyannote metric class having diarization DERs for all the files.
 
 ---
 ### <a name = 'diarizationOracleNumSpkrs'></a> def diarizationOracleNumSpkrs()
 ```sh
 def diarizationOracleNumSpkrs(audio_dataset, method="KMeans"):
 ```
+_Defined in baselineMethods.py_
 
 Predict the diarization labels using the oracle number of speakers for all the audio files in audio\_dataset with KMeans/ Spectral clustering algorithm. 
 
@@ -147,6 +151,7 @@ Variable                        | Detail
 ```sh
 def diarizationEigenGapNumSpkrs(audio_dataset):
 ```
+_Defined in baselineMethods.py_
 
 Predict the diarization labels using for all the audio files in audio\_dataset with Spectral clustering algorithm. It uses Eigen principle to predict the optimal number of speakers. The module uses already implented spectral algorithm from here: [https://github.com/wq2012/SpectralCluster](https://github.com/wq2012/SpectralCluster)
 
