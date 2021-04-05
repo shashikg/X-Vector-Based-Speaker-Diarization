@@ -6,6 +6,11 @@ feature extraction. Spectral clustering is used for audio-label assignment.
 ## DataSet
 Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files.
 
+## ipynb Notebook Files
+- **ExtractVAD.ipynb:** Used to extract and save all the VAD mapping for the audio files in VoxConverse dataset.
+- **ExtractXvectors.ipynb:** Used to precompute X-vectors for the audio files in VoxConverse dataset and save it into a zip file to use it in the DiarizationDataset.
+- **Baseline.ipynb:** To evaluate the DER score for the baseline models described in the report. Use the link available in the Tutorial section to run it on google colab.
+
 ## Tutorial
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1D23rxcCqZe78hUeJORv5nu8efTUMifws)
 
@@ -35,7 +40,7 @@ class DiarizationDataset(root_dir='./audio/',
                  vad_step=4,
                  split='full')
 ```
-Create an abstract class for loading dataset. This class applies the necessary pre-processing and x-vector feature extraction methods to return the audio file as a bunch of segmented x-vector features to use it directly in the clustering algorithm to predict speaker labels.
+Create an abstract class for loading dataset. This class applies the necessary pre-processing and x-vector feature extraction methods to return the audio file as a bunch of segmented x-vector features to use it directly in the clustering algorithm to predict speaker labels. The module uses the pre-computed X-vectors if available otherwise extract it during the runtime.
 
 **Parameters:**
 Argument                        | Detail
