@@ -14,7 +14,7 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
 - [class DiarizationDataset](#diarizationdataset)
   - [\_\_getitem\_\_](#getitem)
 
-
+---
 ### <a name = 'diarizationdataset'></a> class DiarizationDataset()
 ```sh
 class DiarizationDataset(root_dir='./audio/', 
@@ -78,6 +78,7 @@ Variable                        | Detail
 ------------------------------- | ------------
 `rttm_out:`                     |  _numpy.array_, (..., 3) Array with column 1 belonging to start time of speaker, clumn 2 end time of speaker, adn column 3 speaker label
 
+---
 ### <a name = 'make_rttm'></a> def make\_rttm()
 ```sh
 def make_rttm(out_dir, name, labels, win_step):
@@ -98,7 +99,7 @@ Variable                        | Detail
 ------------------------------- | ------------
 `return variable:`              |  _str_, Path to the saved RTTM diarization file.
 
-
+---
 ### <a name = 'get_metrics'></a> def get\_metrics()
 ```sh
 def get_metrics(groundtruth_path, hypothesis_path):
@@ -117,7 +118,7 @@ Variable                        | Detail
 ------------------------------- | ------------
 `metric:`              |  _pyannote.metrics_, Pyannote metric class having diarization DER's for all the files.
 
-
+---
 ### <a name = 'diarizationOracleNumSpkrs'></a> def diarizationOracleNumSpkrs()
 ```sh
 def diarizationOracleNumSpkrs(audio_dataset, method="KMeans"):
@@ -136,7 +137,7 @@ Variable                        | Detail
 ------------------------------- | ------------
 `hypothesis_dir:`              |  _str_, Directory where all the predicted RTTM diarization files are saved.
 
-
+---
 ### <a name = 'diarizationEigenGapNumSpkrs'></a> def diarizationEigenGapNumSpkrs()
 ```sh
 def diarizationEigenGapNumSpkrs(audio_dataset):
