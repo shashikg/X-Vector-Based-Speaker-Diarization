@@ -17,21 +17,12 @@ from pyannote.database.util import load_rttm
 from pyannote.metrics.diarization import DiarizationErrorRate
 from pyannote.core import Annotation, Segment, notebook
 
+torchaudio.set_audio_backend("soundfile")
+
 import warnings
 warnings.filterwarnings('ignore')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Load ECAPA-TDNN x-vector based pre-trained model on speaker verification task (latest x-vector system)
-# https://arxiv.org/pdf/2005.07143.pdf
-ECAPA = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", run_opts={"device": device})
-
-# Load VAD Model
-# https://github.com/snakers4/silero-vad
-model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
-                              model='silero_vad',
-                              force_reload=True)
-(get_speech_ts, _, read_audio, _, _, _) = utils
 
 # Module to load preocmputed xvectors using ECAP-TDNN on Voxconverse Dataset
 VoxConverse_Xvectors_Precomputed = {}
@@ -46,6 +37,25 @@ def downloadZipAndExtract(url, save_dir):
     subprocess.check_output(["rm", "tmp.zip"])
     
     print("Download and Extraction Complete")
+    
+
+def read_audio(path: str,
+               target_sr: int = 16000):
+
+    assert torchaudio.get_audio_backend() == 'soundfile'
+    wav, sr = torchaudio.load(path)
+
+    if wav.size(0) > 1:
+        wav = wav.mean(dim=0, keepdim=True)
+
+    if sr != target_sr:
+        transform = torchaudio.transforms.Resample(orig_freq=sr,
+                                                   new_freq=target_sr)
+        wav = transform(wav)
+        sr = target_sr
+
+    assert sr == target_sr
+    return wav.squeeze(0)
     
 # Creating test and train splits for VoxConverse dataset...
 VoxConverseSplits = {}
@@ -111,13 +121,29 @@ class DiarizationDataSet(Dataset):
         self.vad_step = vad_step
         self.vad_dir = vad_dir
         
-        if (window_step, window_len) in list(VoxConverse_Xvectors_Precomputed.keys()):
+        if xvectors_dir:
+            self.xvectors_dir = xvectors_dir
+        elif (window_step, window_len) in list(VoxConverse_Xvectors_Precomputed.keys()):
             print("Precomputed X-vectors exists!\nWill use precomputed features...")
             print("\nDownloading precomputed features...")
             downloadZipAndExtract(VoxConverse_Xvectors_Precomputed[(window_step, window_len)], "./")
             self.xvectors_dir = "./VoxConverse_Xvectors/"
         else:
             self.xvectors_dir = xvectors_dir
+            
+        with torch.no_grad():
+            # Load ECAPA-TDNN x-vector based pre-trained model on speaker verification task (latest x-vector system)
+            # https://arxiv.org/pdf/2005.07143.pdf
+            if self.xvectors_dir == None:
+                self.ECAPA = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", run_opts={"device": device})
+            
+            # Load VAD Model
+            # https://github.com/snakers4/silero-vad
+            if self.vad_dir == None:
+                self.vad_model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
+                                              model='silero_vad',
+                                              force_reload=True)
+                (self.get_speech_ts, _, _, _, _, _) = utils
 
     def __len__(self):
         return len(self.filelist)
@@ -157,10 +183,10 @@ class DiarizationDataSet(Dataset):
             with torch.no_grad():
                 Xt = []
                 for i in range(audio_segments.shape[0]//self.batch_size_for_ecapa):
-                    Xt.append(ECAPA.encode_batch(audio_segments[i*self.batch_size_for_ecapa:(i+1)*self.batch_size_for_ecapa])[:,0,:])
+                    Xt.append(self.ECAPA.encode_batch(audio_segments[i*self.batch_size_for_ecapa:(i+1)*self.batch_size_for_ecapa])[:,0,:])
         
                 if audio_segments.shape[0]%self.batch_size_for_ecapa != 0:
-                    Xt.append(ECAPA.encode_batch(audio_segments[(audio_segments.shape[0]//self.batch_size_for_ecapa)*self.batch_size_for_ecapa:])[:,0,:])
+                    Xt.append(self.ECAPA.encode_batch(audio_segments[(audio_segments.shape[0]//self.batch_size_for_ecapa)*self.batch_size_for_ecapa:])[:,0,:])
         
                 audio_segments = torch.vstack(Xt)
             
@@ -171,7 +197,7 @@ class DiarizationDataSet(Dataset):
             vad_path = os.path.join(self.vad_dir, self.filelist[idx][:-4]+'.npy')
             speech_timestamps = np.load(vad_path, allow_pickle=True)
         else:
-            speech_timestamps = get_speech_ts(audio, model, num_steps=self.vad_step)
+            speech_timestamps = self.get_speech_ts(audio, self.vad_model, num_steps=self.vad_step)
             
         speech_segments = torch.zeros(NumWin)
         for i in speech_timestamps:
