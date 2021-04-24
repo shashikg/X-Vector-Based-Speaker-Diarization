@@ -55,8 +55,18 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
     - [func refine](#refinediffuse)
   - [class RowWiseNormalize](#rowwisenormalize)
     - [func refine](#refinerowwisenormalize)
-+
+- [Defined in: DEC.py](#DEC.py)
+  - [class ResidualAutoEncoder](#residualautoencoder)
+  - [func load\_encoder](#loadencoder)
+  - [class ClusteringModule](#clusteringmodule)
+    - [func init\_centroid](#initcentroid)
+  - [class DEC](#dec)
+    - [func fit](#fit)
+    - [func predict](#predict)
+    - [func clusterAccuracy](#clusteraccuracy)
+  - [func diarizationDEC](#diarizationDEC)
 ---
+[//]: # (======================================================for utils.py=========================================================)
 ## <a name =  'utils.py'></a> Defined in: utils.py
 ### <a name = 'diarizationdataset'></a> class DiarizationDataset() 
 _Defined in utils.py_
@@ -165,6 +175,8 @@ Variable                        | Detail
 `metric:`                       |  _pyannote.metrics_, Pyannote metric class having diarization DERs for all the files.
 
 ---
+[//]: # (===================================================for baselineMethods.py======================================================)
+
 ## <a name = 'baselineMethods.py'></a> Defined in baselineMethods.py
 ### <a name = 'diarizationOracleNumSpkrs'></a> def diarizationOracleNumSpkrs()
 ```sh
@@ -205,6 +217,8 @@ Variable                        | Detail
 `hypothesis_dir:`               |  _str_, Directory where all the predicted RTTM diarization files are saved
 
 ---
+[//]: # (==================================================for optimumSpeaker.py=====================================================)
+
 ## <a name = 'optimumSpeaker.py'></a> Defined in optimumSpeaker.py
 Inspired from [https://github.com/wq2012/SpectralCluster](https://github.com/wq2012/SpectralCluster)
 ### <a name = 'eigengap'></a> class eigengap()
@@ -348,7 +362,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------        | -----------
-`Y`                             | _numpy.ndarray_, Output array with Crop diagonal refinement applied
+`Y:`                             | _numpy.ndarray_, Output array with Crop diagonal refinement applied
 
 ---
 
@@ -379,7 +393,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------        | -----------
-`Y`                             | _numpy.ndarray_, Output array with gaussian filter applied
+`Y:`                             | _numpy.ndarray_, Output array with gaussian filter applied
 
 ---
 
@@ -415,7 +429,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------        | -----------
-`Y`                             | _numpy.ndarray_, Output array with row wise threshold applied
+`Y:`                             | _numpy.ndarray_, Output array with row wise threshold applied
 
 ---
 
@@ -440,7 +454,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------        | -----------
-`Y`                             | _numpy.ndarray_, Output symmetric array 
+`Y:`                             | _numpy.ndarray_, Output symmetric array 
 
 ---
 
@@ -465,7 +479,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------        | -----------
-`Y`                             | _numpy.ndarray_, Output diffused symmetric array 
+`Y:`                             | _numpy.ndarray_, Output diffused symmetric array 
 
 ---
 ### <a name = 'rowwisenormalize'></a> class RowWiseNormalize()
@@ -489,10 +503,199 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------        | -----------
-`Y`                             | _numpy.ndarray_, Output row normalized array
+`Y:`                             | _numpy.ndarray_, Output row normalized array
 
 ---
 
+[//]: # (======================================================for DEC.py=========================================================)
+## <a name = 'DEC.py'></a> Defined in DEC.py
+### <a name = 'residualautoencoder'></a> class ResidualAutoEncoder()
+```sh
+class ResidualAutoEncoder(ip_features, 
+                          hidden_dims=[500, 500, 2000, 30]))
+```
+_Defined in DEC.py_
+
+Create a torch.nn.Module for a deep autoencoder composed of Residual Neural Network (ResNet) bloacks as the encoder and decoder layer. Activation used is ReLU. The bottleneck encoder output and final decoder output are not activated to avoid data loss due to ReLU activation. 
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`ip_features:`                  |  _int_, Input features size
+`hidden_dims:`                  |  _list of int_, List of hidden dimension features. Last element on the list is the output dimension of bottleneck of the autoencoder
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`z:`                            | _torch.Tensor_, Output from the bottle encoder of the deep autoencoder network. 
+`xo:`                           | _list of torch.Tensor_, Output from each encoder except the bottle encoder of the deep autoencoder. First item of the list is the input given to the system.
+`xr:`                           | _list of torch.Tensor_, Reconstruction of inputs to each encoder layer of autoencoder. xr is reversed so that i-th item in list xr is the reconstruction of i-th item in list xo. Eg. First item of xo is the input to the ResidualAutoEncoder network, and first item of xr is the reconstruction from the ResidualAutoEncoder network.
+
+---
+### <a name = 'loadencoder'></a> def load\_encoder()
+```sh
+def load_encoder():
+```
+_Defined in DEC.py_
+
+Load weights from the ResidualAutoEncoder trained on the training data. 
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`model:`                        |  _ResidualAutoEncoder, Model with input feature size of 192, and hidden layers of size 500, 500, 2000, 30. Weights of the model initialized to weight of the autoencoder trained on training data.
+
+---
+### <a name = 'clusteringmodule'></a> class ClusteringModule()
+```sh
+class ClusteringModule(nn.Module):
+    def __init__(self, 
+                 num_clusters, 
+                 encoder, data, 
+                 cinit = "KMeans"):
+```
+_Defined in DEC.py_
+
+Clustering module of the deep embedding clustering (DEC) algorithm. It uses the trained encoder of the ResidualAutoEncoder to initialize the DEC Clustering network. Kmeans is used to initialize centroids in the latent space.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`num_clusters:`                 |  _str_, Number of clusters to create from the algorithm
+`encoder:`                      |  _nn.Module_, Pre-trained encoder for intializing the centroids. Encoder tranforms data to the latent space for clustering
+`cinit:`                        |  _str_, Initialization method of centroids of clusters. Default `KMeans`
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`q:`                            | _torch.Tensor_, Tensor of similarity between embedding points z_i and centroid mu_j. Assumes Student's t distribution as the kernel
+`p:`                            | _torch.Tensor_, Tensor of target distribution based on soft assignment of q_i
+`xo[0]`                         | _torch.Tensor_, Input data to the ResidualAutoEncoder
+`xr[0]`                         | -torch.Tensor_, Reconstructed input by the ResidualAutoEncoder
+
+**Class Functions:**
+
+1. <a name = 'initcentroid'></a> **init\_centroid:**
+```sh
+def init_centroid(self, 
+                  data, 
+                  method = "KMeans")
+```
+Returns clustered data after calculating the optimal number of speakers using eigen-gap method, and then clustering the data based on the method specified.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`data:`                         | _torch.Tensor_, Input data to be clustered
+`method:`                       | _numpy.ndarray_, Clustering method. Default `KMeans`. Options `KMeans`/`Spectral`
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`output:`                       | _torch.Tensor_, Tensor containing intialized centroids for the dataset
+
+---
+### <a name = 'dec'></a> class DEC()
+```sh
+class DEC(self, 
+          num_clusters, 
+          encoder, data, 
+          cinit = "KMeans"):
+```
+_Defined in DEC.py_
+
+Deep embedding clustering (DEC) algorithm. It uses the trained encoder of the ResidualAutoEncoder to initialize the DEC Clustering network. It calls ClusteringModule class to initialize the centroids.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`encoder:`                      |  _nn.Module_, Pre-trained encoder for intializing the centroids. Encoder tranforms data to the latent space for clustering
+`num_clusters:`                 |  _str_, Number of clusters to create from the algorithm. Default `None` uses eigengap to determine number of clusters
+`cinit:`                        |  _str_, Initialization method of centroids of clusters. Default `KMeans`. Options `KMeans`/`Spectral`
+
+
+**Class Functions:**
+
+1. <a name = 'fit'></a> **fit:**
+```sh
+def fit(self, 
+        data, 
+        y_true = None,
+        niter = 150,
+        lrEnc = 1e-4,
+        lrCC = 1e-4,
+        verbose = False)
+```
+
+Trains the algorithm by measuring the KL Divergence between target and observed distributions. Also updates the ResidualAutoEncoder using MSE loss in parallel to improve the latent space project of the data for better clustering. Both the updates use the Adams optimizer and the objective function is a linear combination of KL Divergence between target and observed distribution, and MSE Loss between input data and its reconstruction by the ResidualAutoEncoder.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`data:`                         | _torch.Tensor_, Input data to be clustered
+`y_true:`                       | _numpy.ndarray_, True labels of the data we aim to cluster. `predict()` and `clusterAccuracy()` functions are invoked only if y_true is not `None`
+`niter`                         | _int_, Number of epochs to train the model for
+`lrEnc`                         | _float_, Learning rate for updating the encoder
+`lrCC`                          | _float_, Learning rate for updating the cluster centres
+`verbose`                       | _bool_, `True` value activates the tqdm progress bar while training. `False` returns no updates when training
+
+2. <a name = 'predict'></a> **predict:**
+```def predict(self, data)```
+
+Predict the cluster label to the data by inspecting the label about which the observed distribution is maximized.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`data:`                         | _torch.Tensor_, Input data to be labels after clustering
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`y_pred:`                       | _numpy.ndarray_, Soft prediction labels of the data
+
+
+3. <a name = 'clusteraccuracy'></a> **clusterAccuracy:**
+```def clusterAccuracy(self, y_pred, y_true)```
+
+Predict the cluster labels accuracy as the maximum accuracy between y_pred and y_true for all the permutation of y_pred. This permutation is found by linear_sum_assignment optimization function of scipy.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`y_pred:`                       | _numpy.ndarray_, Prediction of the labels by DEC algorithm
+`y_true`                        | _numpy.ndarray_, True labels of the data
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`accuracy:`                     | _float_, Cluster assignment accuracy
+`reassignment:`                 | _dict_, dictionary with key as rows and value as cols indices for the optimal assignment
+
+---
+### <a name = 'diarizationDEC'></a> def diarizationDEC()
+```sh
+def diarizationDEC(audio_dataset,
+                   num_spkr = None,
+                   hypothesis_dir = None)
+```
+_Defined in DEC.py_
+
+Compute diarization labels based on oracle number of speakers if `num_spkr = 'oracle'`. Used as an optimal benchmark for performance of DEC. If `num_spkr = None`, uses eigen-gap maximization in the ClusteringModule to determine the number of speakers.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`audio_dataset:`                |  _utils.DiarizationDataset_, Test diarization dataset 
+`num_spkr:`                     |  _str_,  `None` for calculating the optimal number of speakers from eigen-gap maximization. `oracle` for using the number of speakers in each window given with the data.
+`hypothesis_dir:`               |  _str_, Directory to store the predicted speaker labels in the audio segments in an rttm file. `None` stores it in `./rttm_output/` directory
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`hypothesis_dir:`               |  _str_, Directory to the rttm files containing predicted speaker labels with their timestamps
+
+---
 [//]: #
 [dec]: <https://arxiv.org/abs/1511.06335>
 [desplanques]: <https://arxiv.org/abs/2005.07143v1>
