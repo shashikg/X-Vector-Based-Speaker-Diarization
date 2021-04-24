@@ -27,8 +27,8 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
 ### Index
 - [Defined in: utils.py](#utils.py)
   - [class DiarizationDataset](#diarizationdataset)
-    - [\_\_getitem\_\_](#getitem)
-    - [read\_rttm](#read_rttm)
+    - [func \_\_getitem\_\_](#getitem)
+    - [func read\_rttm](#read_rttm)
   - [func make\_rttm](#make_rttm)
 - [Defined in: baselineMethods.py](#baselineMethods.py)
   - [func get\_metrics](#get_metrics)
@@ -36,8 +36,26 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
   - [func diarizationEigenGapNumSpkrs](#diarizationEigenGapNumSpkrs)
 - [Defined in: optimumSpeaker.py](#optimumSpeaker.py)
   - [class eigengap](#eigengap)
-    - [\_get\_refinement\_operator](#getrefinementoperator)
-
+    - [func \_get\_refinement\_operator](#getrefinementoperator)
+    - [func compute\_affinity\_matrix](#computeaffinitymatrix)
+    - [func compute\_sorted\_eigenvectors](#computesortedeigenvectors)
+    - [func compute\_number\_of\_clusters](#computenumberofclusters)
+  - [class AffinityRefinementOperation](#affinityrefinementoperation)
+    - [func check\_input](#checkinput)
+    - [func refine](#refine)
+  - [class CropDiagonal](#Cropdiagonal)
+    - [func refine](#refineCropdiagonal)
+  - [class GaussianBlur](#gaussianblur)
+    - [func refine](#refinegaussianblur)
+  - [class RowWiseThreshold](#rowwisethreshold)
+    - [func refine](#refinerowwisethreshold)
+  - [class Symmetrize](#symmetrize)
+    - [func refine](#refinesymmetrize)
+  - [class Diffuse](#diffuse)
+    - [func refine](#refinediffuse)
+  - [class RowWiseNormalize](#rowwisenormalize)
+    - [func refine](#refinerowwisenormalize)
++
 ---
 ## <a name =  'utils.py'></a> Defined in: utils.py
 ### <a name = 'diarizationdataset'></a> class DiarizationDataset() 
@@ -102,7 +120,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------------- | ------------
-`rttm_out:`                     |  _numpy.array_, (..., 3) Array with column 1 holding start time of speaker, column 2 holding end time of speaker, and column 3 holding speaker label
+`rttm_out:`                     |  _numpy.ndarray_, (..., 3) Array with column 1 holding start time of speaker, column 2 holding end time of speaker, and column 3 holding speaker label
 
 ---
 ### <a name = 'make_rttm'></a> def make\_rttm()
@@ -209,10 +227,10 @@ Argument                        | Detail
 `min_clusters:`                 | _int_, Minimum number of output clusters
 `max_clusters:`                 | _int_, Maximum number of output clusters 
 `p_percentile:`                 | _float_, Parameter to computing p-th percentile for percentile based thresholding
-`gaussian_blur_sigma:`          | _float_, sigma value for scipy gaussian filter
-`stop_eigenvalue:`              | _float_, minimum value of eigenvalue of Affinity matrix for its eigenvector to be considered in clustering
-`thresholding_soft_mutiplier:`  | _float_, factor to multiply to cells with value less than threshold in row/percentile thresholding. Parameter value of 0.0 turn cells less than threshold to zero in the matrix 
-`thresholding_with_row_max:`    | _bool_, True for row thresholding, False for percentile thresholding
+`gaussian_blur_sigma:`          | _float_, sigma value for standard deviation of gaussian kernel in scipy gaussian filter
+`stop_eigenvalue:`              | _float_, Minimum value of eigenvalue of Affinity matrix for its eigenvector to be considered in clustering
+`thresholding_soft_mutiplier:`  | _float_, Factor to multiply to cells with value less than threshold in row/percentile thresholding. Parameter value of 0.0 turn cells less than threshold to zero in the matrix 
+`thresholding_with_row_max:`    | _bool_, True for row-max thresholding, False for percentile thresholding
 
 **Class Functions:**
 
@@ -222,9 +240,259 @@ Argument                        | Detail
 **Parameters:**
 Argument                        | Detail
 ------------------------------- | ------------
-`name:`                         | _str_, Get the named refinement operator. Available refinements- `'CropDiagonal'`, `'GaussianBlur'`, `'RowWiseThreshold'`, `'Symmetrize'`, `'Diffuse'`, `'RowWiseNormalize'`
+`name:`                         | _str_, Get the input refinement operator. Available refinements- `'CropDiagonal'`, `'GaussianBlur'`, `'RowWiseThreshold'`, `'Symmetrize'`, `'Diffuse'`, `'RowWiseNormalize'`
+
+**Returns:**
+Variable                                                                                                           | Detail
+-------------------------------------------------------------------------------------------------------            | -----------
+ `CropDiagonal()`/`GaussianBlur()`/<br>`RowWiseThreshold()`/`Symmetrize()`/ <br>`Diffuse()`/`RowWiseNormalize()`   | _optimumSpeaker.AffinityRefinementOperation_, Returns specified refinement method class
+
+2. <a name = 'computeaffinitymatrix'></a> **compute\_affinity\_matrix:**
+```def compute_affinity_matrix(self, X)```
+Compute the affinity matrix for a matrix X with row as each instance and column as features by calculating cosine similarity between pair of l2 normalized columns of X
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            |  _numpy.ndarray_, (n_windows, n_features) Input matrix with column as features to compute affinity matrix between pair of columns
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`affinity:`                     |  _numpy.ndarray_, (n_windows, n_windows) Symmetric array with (i,j)th value equal to cosine similiarity between i-th and j-th row
+
+3. <a name = 'computesortedeigenvectors'></a> **compute\_sorted\_eigenvectors:**
+```def compute_sorted_eigenvectors(self, A)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`A:`                            |  _numpy.ndarray_, (n_windows, n_windows) Symmetric array with (i,j)th value equal to cosine similiarity between i-th and j-th row
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`w:`                            |  _numpy.ndarray_, Decreasing order sorted eigen values of affinity matrix A
+`v:`                            |  _numpy.ndarray_, Eigen vectors corresponding to eigen values returned
+
+4. <a name = 'computenumberofclusters'></a> **compute\_number\_of\_clusters:**
+```def compute_number_of_clusters(self, eigenvalues, max_clusters, stop_eigenvalue)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`eigenvalues:`                  |  _numpy.ndarray_, Decreasing order sorted eigen values of affinity matrix between different windows
+`max_clusters:`                 |  _int_, Maximum number of clusters required. Default `'None'` puts no such limit to the number of clusters
+`stop_eigenvalue:`              |  _float_, Minimum value of eigenvalue to be considered for deciding number of clusters. Eigenvalues below this value are discarded
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`max_delta_index:`              |  _int_, Index to the eigenvalue such that eigen gap is maximized. It gives the number of clusters determined by the function
 
 ---
+
+### <a name = 'affinityrefinementoperation'></a> class AffinityRefinementOperation()
+```sh
+class AffinityRefinementOperation(metaclass=abc.ABCMeta)
+```
+_Defined in optimumSpeaker.py_
+
+Meta class to the refinement operation classes passed as input to be perfomed on the data
+
+**Class Functions:**
+
+1. <a name = 'checkinput'></a> **check\_input:**
+```def check_input(self, X)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be refined by refinement operators 
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`ValueError()`\ `TypeError()` | _ValueError/TypeError_, Type Error if X is not a numpy array. Value error if X is not a 2D square matrix
+
+2. <a name = 'refine'></a> **refine:**
+```def refine(self, X)```
+Abstract function redefined in various child classes of class AffinityRefinementOperation
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be refined by refinement operators 
+
+---
+
+### <a name = 'Cropdiagonal'></a> class CropDiagonal()
+```sh
+class Cropdiagonal(AffinityRefinementOperation)
+```
+_Defined in optimumSpeaker.py_
+
+Operator to replace diagonal element by the max non-diagonal value of row. Post operation, the matrix has similar properties to a standard Laplacian matrix.
+This also helps to avoid the bias during Gaussian blur and normalization.
+
+**Class Functions:**
+
+1. <a name = 'refineCropdiagonal'></a> **refine:**
+```def refine(self, X)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be refined by refinement operators 
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`Y`                             | _numpy.ndarray_, Output array with Crop diagonal refinement applied
+
+---
+
+### <a name = 'gaussianblur'></a> class GaussianBlur()
+```sh
+class GaussianBlur(AffinityRefinementOperation)
+      def __init__(self, sigma = 1)
+```
+_Defined in optimumSpeaker.py_
+
+Operator to apply gaussian filter to the input array. Uses scipy.ndimage.gaussian_filter
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`sigma:`                        | _float_, Standard deviation for Gaussian kernel
+
+**Class Functions:**
+
+1. <a name = 'refinegaussianblur'></a> **refine:**
+```def refine(self, X)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be refined by refinement operators 
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`Y`                             | _numpy.ndarray_, Output array with gaussian filter applied
+
+---
+
+### <a name = 'rowwisethreshold'></a> class RowWiseThreshold()
+```sh
+class RowWiseThreshold(AffinityRefinementOperation)
+      def __init__(self,
+                 p_percentile=0.95,
+                 thresholding_soft_multiplier=0.01,
+                 thresholding_with_row_max=False)
+```
+_Defined in optimumSpeaker.py_
+
+Operator to apply row wise thresholding based on either percentile or row-max thresholding. 
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`p_percentile:`                 | _float_, Standard deviation for Gaussian kernel
+`thresholding_soft_multiplier:` | _float_, Factor to multiply to cells with value less than threshold in row/percentile thresholding. Parameter value of 0.0 turn cells less than threshold to zero in the matrix 
+`thresholding_with_row_max:`    | _bool_, `True` applies row-max based thresholding, `False` applies percentile based thresholding
+
+**Class Functions:**
+
+1. <a name = 'refinerowwisethreshold'></a> **refine:**
+```def refine(self, X)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be refined by refinement operators 
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`Y`                             | _numpy.ndarray_, Output array with row wise threshold applied
+
+---
+
+### <a name = 'symmetrize'></a> class Symmetrize()
+```sh
+class Cropdiagonal(AffinityRefinementOperation)
+```
+_Defined in optimumSpeaker.py_
+
+Operator to return a symmetric matrix based on max{ X, X<sup>T</sup> } from a given input matrix X.
+
+**Class Functions:**
+
+1. <a name = 'refinesymmetrize'></a> **refine:**
+```def refine(self, X)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be used to create a symmetric matrix
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`Y`                             | _numpy.ndarray_, Output symmetric array 
+
+---
+
+### <a name = 'diffuse'></a> class Diffuse()
+```sh
+class Diffuse(AffinityRefinementOperation)
+```
+_Defined in optimumSpeaker.py_
+
+Operator to return a diffused symmetric matrix X<sup>T</sup>X from a given input matrix X.
+
+**Class Functions:**
+
+1. <a name = 'refinediffuse'></a> **refine:**
+```def refine(self, X)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be used to create a diffused symmetric matrix
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`Y`                             | _numpy.ndarray_, Output diffused symmetric array 
+
+---
+### <a name = 'rowwisenormalize'></a> class RowWiseNormalize()
+```sh
+class RowWiseNormalize(AffinityRefinementOperation)
+```
+_Defined in optimumSpeaker.py_
+
+Operator to normalize each row of input matrix X by the maximum value in the corresponding rows.
+
+**Class Functions:**
+
+1. <a name = 'refinerowwisenormalize'></a> **refine:**
+```def refine(self, X)```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            | _numpy.ndarray_, Input array to be row normalized
+
+**Returns:**
+Variable                        | Detail
+------------------------        | -----------
+`Y`                             | _numpy.ndarray_, Output row normalized array
+
+---
+
 [//]: #
 [dec]: <https://arxiv.org/abs/1511.06335>
 [desplanques]: <https://arxiv.org/abs/2005.07143v1>
