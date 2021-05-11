@@ -8,6 +8,9 @@ from __future__ import print_function
 import abc
 from scipy.ndimage import gaussian_filter
 import numpy as np
+import torch
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class eigenGap:
     def __init__(self, min_clusters=1, max_clusters=100, p_percentile=0.9, 
@@ -26,7 +29,8 @@ class eigenGap:
                                     "RowWiseThreshold",
                                     "Symmetrize",
                                     "Diffuse",
-                                    "RowWiseNormalize"]
+                                    "RowWiseNormalize",
+                                    "Symmetrize"]
 
     def _get_refinement_operator(self, name):
         if name == "CropDiagonal":
@@ -51,7 +55,7 @@ class eigenGap:
             op = self._get_refinement_operator(refinement_name)
             affinity = op.refine(affinity)
 
-        (eigenvalues, eigenvectors) = self.compute_sorted_eigenvectors(affinity)
+        eigenvalues = self.compute_sorted_eigenvalues(affinity)
         k = self.compute_number_of_clusters(eigenvalues, self.max_clusters, self.stop_eigenvalue)
 
         return max(k, self.min_clusters)
@@ -63,14 +67,12 @@ class eigenGap:
         affinity = (cosine_similarities + 1.0) / 2.0
         return affinity
 
-    def compute_sorted_eigenvectors(self, A):
-        eigenvalues, eigenvectors = np.linalg.eig(A)
+    def compute_sorted_eigenvalues(self, A):
+        eigenvalues = np.linalg.eigvalsh(A)
         eigenvalues = eigenvalues.real
-        eigenvectors = eigenvectors.real
         index_array = np.argsort(-eigenvalues)
         w = eigenvalues[index_array]
-        v = eigenvectors[:, index_array]
-        return w, v
+        return w
 
     def compute_number_of_clusters(self, eigenvalues, max_clusters=None, stop_eigenvalue=1e-2):
         max_delta = 0
