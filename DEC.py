@@ -74,14 +74,16 @@ class ResidualAutoEncoder(nn.Module):
 
 
 def load_encoder():
-    if 'ResAE_Model.pth' not in os.listdir("./"):
+    if 'ResAE_Model_III.pth' not in os.listdir("./"):
         print("Downloading pre-trained weights for auto encoder...")
-        subprocess.check_output(["gdown", "--id", "1SI1GOCDnzbZRicm-2toeY2AfkYdbygQc"]) # [500, 500, 2000, 30]
+        # subprocess.check_output(["gdown", "--id", "1SI1GOCDnzbZRicm-2toeY2AfkYdbygQc"]) # [500, 500, 2000, 30]
+        subprocess.check_output(["gdown", "--id", "10FRT4V5-fanAasMYzG3IPnE7Ocp-e6gv"]) # ResAE_Model_III 
+        # subprocess.check_output(["gdown", "--id", "1bjccsVgK2B98QdGwGa3MxlFBpsWgbAGT"]) # ResAE_Model_III_FT
         # subprocess.check_output(["gdown", "--id", "1wX1DLxHn74VV50JTwY4trz5P8cw3v8Cl"]) # [128, 128, 512, 64]
         print("Downloading Complete!\n")
     
     model = ResidualAutoEncoder(ip_features=192, hidden_dims=[500, 500, 2000, 30])
-    weights = torch.load('./ResAE_Model.pth')
+    weights = torch.load('./ResAE_Model_III.pth')
     model.load_state_dict(weights['state_dict'])
     model = model.to(device)
 
@@ -112,14 +114,19 @@ class ClusteringModule(nn.Module):
         z_init, _, _ = self.encoder(data.to(device))
         
         if self.num_clusters == None:
-            EGNC = optimumSpeaker.eigenGap()
-            self.num_clusters = EGNC.find(z_init.detach().cpu().numpy())
+            EGNC = optimumSpeaker.eigenGap(p_percentile=0.9, gaussian_blur_sigma=2)
+            n1 = EGNC.find(z_init.detach().cpu().numpy())
+            EGNC = optimumSpeaker.eigenGap(p_percentile=0.95, gaussian_blur_sigma=2)
+            n2 = EGNC.find(z_init.detach().cpu().numpy())
+            
+            self.num_clusters = max(n1, n2)
+            # self.num_clusters = max(n1, 0)
 
         Xt = z_init.detach().cpu().numpy()
         X = Xt - Xt.mean(axis=0)
         X = X/X.std(axis=0)
 
-        pca = decomposition.PCA(n_components=self.num_clusters)
+        pca = decomposition.PCA(n_components=min(self.num_clusters, X.shape[1]))
         pca.fit(X)
         X_pca = pca.transform(X)
 
@@ -182,7 +189,7 @@ class DEC:
             
             verbose_text = "Niter " + str(epoch+1) + "/" + str(niter) + " - train_loss: " + str(round(loss.item(), 3))
             
-            if y_true != None:
+            if y_true is not None:
                 y_pred = self.predict(data)
                 acc, _ = self.clusterAccuracy(y_pred, y_true)
                 verbose_text +=  " - train_acc: " + str(round(acc, 3))
@@ -218,13 +225,10 @@ class DEC:
         return accuracy, reassignment
         
 
-def diarizationDEC(audio_dataset, num_spkr=None, hypothesis_dir=None):
+def diarizationDEC(audio_dataset, num_spkr=None, hypothesis_dir="./rttm_output/"):
     '''
     Compute diarization labels based on oracle number of speakers. Used as an optimal benchmark for performance of DEC.
     '''
-    
-    if hypothesis_dir == None:
-        hypothesis_dir = "./rttm_output/"
     
     try:
         shutil.rmtree(hypothesis_dir)
@@ -252,6 +256,9 @@ def diarizationDEC(audio_dataset, num_spkr=None, hypothesis_dir=None):
         else:
             num_clusters = None
             
+        decClusterer = DEC(encoder=encoder_pretrained, cinit="Spectral", num_clusters=1)            
+        decClusterer.fit(Xdata, niter=100, lrEnc=1e-3, lrCC=1e-1*0)
+        
         decClusterer = DEC(encoder=encoder_pretrained, cinit="Spectral", num_clusters=num_clusters)            
         decClusterer.fit(Xdata, niter=50, lrEnc=1e-3, lrCC=1e-1)
         
@@ -259,8 +266,8 @@ def diarizationDEC(audio_dataset, num_spkr=None, hypothesis_dir=None):
         plabels = decClusterer.predict(Xdata)
         
         # assign "-1" to non speech regions and cluster labels to speech regions
-        diarization_prediction = np.zeros(diarization_segments.shape[0])-1
-        diarization_prediction[speech_idx] = plabels.copy()
+        diarization_prediction = np.zeros(diarization_segments.shape[0]+1)-1
+        diarization_prediction[:-1][speech_idx] = plabels.copy()
         
         # Create RTTM file to compute DER with original diarization result
         name = rttm_path.split(sep="/")[-1][:-5]
