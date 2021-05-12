@@ -10,7 +10,7 @@ We use [Silero-VAD][vad] for voice audio detection.
 **Baseline Model:** Spectral clustering is used for audio-label assignment.
 
 ## DataSet
-Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files.
+Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files. We also tested the model on [AMI](https://groups.inf.ed.ac.uk/ami/corpus/) test dataset (total 16 audio files).
 
 ## Results
 ### VoxConverse
