@@ -35,6 +35,8 @@ Diarization Output Link: [here](http://www.youtube.com/watch?v=NH9Glqdu0gw "Demo
 
 https://user-images.githubusercontent.com/45726064/117953334-8d48e200-b333-11eb-9bab-3e6529b83f57.mp4
 
+![hypothesis](https://user-images.githubusercontent.com/45726064/117957270-8623d300-b337-11eb-9e4c-15751fb2ac9e.png)
+
 ## ipynb Notebook Files
 - **DEC_ResAE.ipynb:** To evaluate the DER score for the DEC models described in the report. Use the link available in Tutorial section to open it on google colab
 - **ExtractVAD.ipynb:** Used to extract and save all the VAD mapping for the audio files in VoxConverse dataset.
