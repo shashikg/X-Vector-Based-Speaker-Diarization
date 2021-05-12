@@ -5,7 +5,7 @@ from google_colab_plugins import playVideo
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
 from google.colab import files
-from utils import make_rttm
+from core.utils import make_rttm
 
 from tqdm.auto import tqdm
 import moviepy.editor as mpe
@@ -71,6 +71,9 @@ def loadVideoFile(playvideo_file=False):
     clip = VideoFileClip("demo/video/"+video_name)
 
     # Create dummy rttm file
+    if not os.path.exists("demo/rttm/"):
+        os.makedirs("demo/rttm/")
+
     video_len = int((clip.duration*1000)//750)
     tmp_diarization_prediction = np.zeros(video_len)
     tmp_diarization_prediction[-1] = -1
@@ -140,7 +143,7 @@ def createAnnotatedVideo(audio_dataset, hypothesis_dir):
 
     Assues that the audio_dataset contains only one single file. And its predicted diarization labels are inside hypothesis_dir.
     '''
-    
+
     orig_video_dir = audio_dataset.data_dir+"video/" + audio_dataset.filelist[0].split(".")[0] + ".mp4"
     cap = cv2.VideoCapture(orig_video_dir)
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

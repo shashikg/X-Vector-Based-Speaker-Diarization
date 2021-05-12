@@ -198,11 +198,13 @@ class DiarizationDataSet(Dataset):
             # Load ECAPA-TDNN x-vector based pre-trained model on speaker verification task (latest x-vector system)
             # https://arxiv.org/pdf/2005.07143.pdf
             if self.xvectors_dir == None:
+                print("Downloading ECAPA model...")
                 self.ECAPA = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", run_opts={"device": device})
 
             # Load VAD Model
             # https://github.com/snakers4/silero-vad
             if self.vad_dir == None:
+                print("Downloading Silero VAD model...")
                 self.vad_model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
                                               model='silero_vad',
                                               force_reload=True)
