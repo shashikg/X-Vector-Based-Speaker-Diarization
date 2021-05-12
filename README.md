@@ -68,6 +68,13 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
     - [func predict](https://github.com/shashikg/speaker_diarization_ee698/wiki/DEC#predict)
     - [func clusterAccuracy](https://github.com/shashikg/speaker_diarization_ee698/wiki/DEC#clusteraccuracy)
   - [func diarizationDEC](https://github.com/shashikg/speaker_diarization_ee698/wiki/DEC#diarizationDEC)
+- [Defined in: colab_demo_utils.py](https://github.com/shashikg/speaker_diarization_ee698/wiki/colab_demo_utils)
+  - [func downloadYouTube](https://github.com/shashikg/speaker_diarization_ee698/wiki/colab_demo_utils#downloadYouTube)
+  - [func loadVideoFile](https://github.com/shashikg/speaker_diarization_ee698/wiki/colab_demo_utils#loadVideoFile)
+  - [func read\_rttm](https://github.com/shashikg/speaker_diarization_ee698/wiki/colab_demo_utils#read_rttm)
+  - [func combine\_audio](https://github.com/shashikg/speaker_diarization_ee698/wiki/colab_demo_utils#combine_audio)
+  - [func createAnnotatedVideo](https://github.com/shashikg/speaker_diarization_ee698/wiki/colab_demo_utils#createAnnotatedVideo)
+
 
 ---
 [//]: #
