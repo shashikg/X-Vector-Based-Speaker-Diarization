@@ -12,6 +12,29 @@ We use [Silero-VAD][vad] for voice audio detection.
 ## DataSet
 Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files.
 
+## Results
+### VoxConverse
+Methods                          |     DER
+-------------------------------  | -----------
+Spectral Clustering              | 17.76
+Ours                             | 12.99
+Spectral Clustering (Oracle VAD) | 17.98
+**Ours (Oracle VAD)**            | **11.70**
+
+### AMI Corpus
+Methods                          |     DER
+-------------------------------  | -----------
+Spectral Clustering              | 21.99
+Ours                             | 23.39
+Spectral Clustering (Oracle VAD) | 14.96
+**Ours (Oracle VAD)**            | **13.14**
+
+### Demo on random YouTube file
+Original Video Link: [here](https://www.youtube.com/watch?v=4-mvb-8FHPo)\
+Diarization Output Link: [here](http://www.youtube.com/watch?v=NH9Glqdu0gw "Demo Speaker Diarization by Team TensorSlow")
+
+https://user-images.githubusercontent.com/45726064/117953334-8d48e200-b333-11eb-9bab-3e6529b83f57.mp4
+
 ## ipynb Notebook Files
 - **DEC_ResAE.ipynb:** To evaluate the DER score for the DEC models described in the report. Use the link available in Tutorial section to open it on google colab
 - **ExtractVAD.ipynb:** Used to extract and save all the VAD mapping for the audio files in VoxConverse dataset.
