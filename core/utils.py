@@ -43,6 +43,7 @@ Xvectors_Precomputed['ami', 250, 1000] = "1dA9UAKuqnMqoVMCjTgge8LgtVylVG9No"
 Xvectors_Precomputed['ami', 250, 1500] = "1-68JWxY_UTeNY7wWcX5mbTOiWGsL17Pm"
 Xvectors_Precomputed['ami', 500, 1500] = "1-6k3DtF-2Tk2E23edV3MjVGEfqMbrisU"
 Xvectors_Precomputed['voxconverse', 750, 1500] = "1-2-AZnabTtHxLmw2DBwj4PJDGwlvFa8J"
+Xvectors_Precomputed['voxconverse', 250, 1500] = "1-21RPeA2KoAymyoa99qD7jvFk6A8bgu8"
 
 # Dictionary to load preocmputed VAD
 VAD_Precomputed = {}
