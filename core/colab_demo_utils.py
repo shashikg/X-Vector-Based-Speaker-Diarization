@@ -14,18 +14,26 @@ import cv2
 import numpy as np
 
 def downloadYouTube(videourl, path):
+    '''
+    To download youtube video
+    '''
+
     yt = YouTube(videourl)
     yt = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().last()
     if not os.path.exists(path):
         os.makedirs(path)
-    
+
     save_dir = yt.download(path)
     return save_dir.split("/")[-1]
 
 def loadVideoFile(playvideo_file=False):
+    '''
+    Helper module to make demo interactive
+    '''
+
     if os.path.exists("demo/"):
         shutil.rmtree("demo/")
-        
+
     choice_ip = input("How do you want to load the video files? Enter the option as A, B, or C.\nA) You have a YouTube link\nB) You have a direct video link\nC) You want to upload a video file from your local drive (slow)\n\nEnter your choice here: ")
     choice_ip = choice_ip.capitalize()
 
@@ -53,11 +61,11 @@ def loadVideoFile(playvideo_file=False):
             video_name = fn
             shutil.copy(video_name, "demo/video/"+video_name)
             os.remove(video_name)
-    
+
     if " " in video_name:
         os.rename("demo/video/"+video_name, "demo/video/"+video_name.replace(" ", "_"))
         video_name = video_name.replace(" ", "_")
-        
+
     print("\nYour video file name is:", video_name, "\n")
 
     clip = VideoFileClip("demo/video/"+video_name)
@@ -71,7 +79,7 @@ def loadVideoFile(playvideo_file=False):
     # Extract audio file
     if not os.path.exists("demo/audio/"):
         os.makedirs("demo/audio/")
-        
+
     clip.audio.write_audiofile("demo/audio/" + video_name.split(".")[0] + ".wav", fps=16000, bitrate='256k')
 
     if playvideo_file:
@@ -84,11 +92,12 @@ def read_rttm(path):
     '''
     Read RTTM Diarization file
     '''
+
     rttm_out = [] # returns list of list containing start frame, end frame, spkid
     with open(path, "r") as f:
         for line in f:
             entry = line[:-2].split()
-            
+
             indexes = [0, 1, 2, 5, 6, 8, 9]
             for index in sorted(indexes, reverse=True):
                 del entry[index]
@@ -97,7 +106,7 @@ def read_rttm(path):
             entry[1] = entry[0] + int(float(entry[1])*16000) # End frame
             entry[2] = int(entry[2][-1:]) # Label
             rttm_out.append(entry)
-            
+
         # Sort rttm list according to start frame
         rttm_out.sort(key = lambda x: x[0])
 
@@ -115,16 +124,27 @@ def read_rttm(path):
     return hypothesis_labels
 
 def combine_audio(vidname, audname, outname, fps=25):
+    '''
+    openCV makes video file without audio. So explicitly merge the extracted audio to annotated video file.
+    '''
+
     my_clip = mpe.VideoFileClip(vidname)
     audio_background = mpe.AudioFileClip(audname)
     final_clip = my_clip.set_audio(audio_background)
     final_clip.write_videofile(outname,fps=fps)
 
 def createAnnotatedVideo(audio_dataset, hypothesis_dir):
+    '''
+    Used to annotate the video with predicted diarization label.
+    Simply adds the predicted label as text on the video.
+
+    Assues that the audio_dataset contains only one single file. And its predicted diarization labels are inside hypothesis_dir.
+    '''
+    
     orig_video_dir = audio_dataset.data_dir+"video/" + audio_dataset.filelist[0].split(".")[0] + ".mp4"
     cap = cv2.VideoCapture(orig_video_dir)
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) 
+    W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -134,7 +154,7 @@ def createAnnotatedVideo(audio_dataset, hypothesis_dir):
     spk_dict = {i: str(i//10) + str(i%10) for i in np.unique(hypothesis_labels[:, 2])}
 
     currspk = "Speaker: None"
-    font = cv2.FONT_HERSHEY_TRIPLEX 
+    font = cv2.FONT_HERSHEY_TRIPLEX
     org = (W//12 , H*3//4)
     fontScale = 1
     color = (255, 255, 255)
@@ -151,7 +171,7 @@ def createAnnotatedVideo(audio_dataset, hypothesis_dir):
         ret, frame = cap.read()
         if ret == False:
             break
-        
+
         # Get current speaker from hypothesis_labels array
         if hypothesis_labels[curr_idx_hypo_array, 0] > max(0, frame_count - 25):
             currspk = "Speaker: None"

@@ -71,7 +71,7 @@ DatasetSplits['voxconverse', 'train'] = [ 15,  76,  94,  96, 162, 211,  68,  56,
                                 184,  23, 207, 200,  70,  99, 180, 128,  77, 115,  86,  58, 161,
                                 153, 147,  62, 160,  52, 214, 125, 168, 185,  82,  97, 196,  90,
                                 43,  63, 124,  28,  44, 110, 195,  72, 182, 137]
-                                
+
 DatasetSplits['voxconverse', 'full'] = [*range(216)]
 
 
@@ -82,10 +82,10 @@ def downloadZipAndExtractFromGDrive(fileid, save_dir):
 
     subprocess.check_output(["unzip", "-o", "tmp.zip", "-d", save_dir])
     subprocess.check_output(["rm", "tmp.zip"])
-    
+
     print("Download and Extraction Complete")
-    
-    
+
+
 def read_audio(path: str, target_sr: int = 16000):
 
     assert torchaudio.get_audio_backend() == 'soundfile'
@@ -102,16 +102,16 @@ def read_audio(path: str, target_sr: int = 16000):
 
     assert sr == target_sr
     return wav.squeeze(0)
-                
+
 
 # Data pipeline
 class DiarizationDataSet(Dataset):
-    def __init__(self, 
+    def __init__(self,
                  dataset_name=None,
                  data_dir=None,
-                 sr=16000, 
-                 window_len=240, 
-                 window_step=120, 
+                 sr=16000,
+                 window_len=240,
+                 window_step=120,
                  transform=None,
                  batch_size_for_ecapa=512,
                  vad_step=4,
@@ -119,26 +119,31 @@ class DiarizationDataSet(Dataset):
                  use_precomputed_vad=True,
                  use_oracle_vad=False,
                  skip_overlap=True):
-        
+
         """
+        Out of  dataset_name or data_dir one must be defined.
+
         Args:
-        - root_dir (string): Local directory of the audio files
-        - audioFilelist (string): txt file with audio file list
-        - label_dir (string): Local directory of the rttm label files
+        - dataset_name (string): Name of the dataset 'ami' or 'voxconverse'
+        - data_dir (string): Local directory of the dataset
         - sr (int): Sample rate for audio signal, default 16kHz
         - window_len (int): Length of each segment of audio signal in milliseconds
         - window_step (int): Length between two window_len in milliseconds
-        - mel_transform (callable, optional): Parameters of mel transform. None signifies no transform
+        - transform (callable, optional): Parameters of mel transform. None signifies no transform
         - batch_size_for_ecapa (int): Size of batches used while applying pretrained speechbrain ECAPA model
+        - split: 'full' or 'test' or 'train'. If dataset split is predifined for the given dataset name, it will use the corresponding split otherwise will give 'full'
+        - use_precomputed_vad: whether to use precomputed vad
+        - use_oracle_vad: whether to use oracle vad
+        - skip_overlap: whether to skip overlapping regions
 
         """
-    
+
         self.dataset_name = dataset_name
-        
+
         if dataset_name != None:
             if dataset_name in dataset_path.keys():
                 self.data_dir = dataset_path[dataset_name]
-                
+
                 if not os.path.isdir(self.data_dir):
                     print("Downloading audio dataset...")
                     downloadZipAndExtractFromGDrive(dataset_link[dataset_name], "./dataset/")
@@ -148,22 +153,22 @@ class DiarizationDataSet(Dataset):
                 dataset_list = "["
                 for keys in dataset_path.keys():
                     dataset_list += keys + "; "
-        
+
                 dataset_list = dataset_list[:-2] + "]"
-        
+
                 raise Exception("'" + dataset_name + "' dataset does not exist. Please use the dataset from following list: " + dataset_list)
         elif data_dir != None:
             self.data_dir = data_dir
         else:
             raise Exception("'dataset_name' and 'data_dir' both can not be 'None'")
-                    
+
         self.root_dir = self.data_dir + "audio/"
         self.label_dir = self.data_dir + "rttm/"
-        
+
         self.filelist = np.array(sorted(os.listdir(self.root_dir)))
         if (dataset_name, split) in DatasetSplits.keys():
             self.filelist = self.filelist[DatasetSplits[dataset_name, split]]
-            
+
         self.split = split
         self.sr = sr
         self.win_len = window_len
@@ -173,14 +178,14 @@ class DiarizationDataSet(Dataset):
         self.vad_step = vad_step
         self.use_oracle_vad = use_oracle_vad
         self.skip_overlap = skip_overlap
-        
+
         if use_precomputed_vad and (dataset_name in VAD_Precomputed.keys()):
             print("Downloading precomputed VADs...")
             downloadZipAndExtractFromGDrive(VAD_Precomputed[dataset_name], dataset_path[dataset_name])
             self.vad_dir = self.data_dir + "vad/"
         else:
             self.vad_dir = None
-        
+
         if (dataset_name, window_step, window_len) in Xvectors_Precomputed.keys():
             print("Precomputed X-vectors exists!\nWill use precomputed features...")
             print("\nDownloading precomputed features...")
@@ -188,13 +193,13 @@ class DiarizationDataSet(Dataset):
             self.xvectors_dir = self.data_dir + "xvectors/"
         else:
             self.xvectors_dir = None
-            
+
         with torch.no_grad():
             # Load ECAPA-TDNN x-vector based pre-trained model on speaker verification task (latest x-vector system)
             # https://arxiv.org/pdf/2005.07143.pdf
             if self.xvectors_dir == None:
                 self.ECAPA = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", run_opts={"device": device})
-            
+
             # Load VAD Model
             # https://github.com/snakers4/silero-vad
             if self.vad_dir == None:
@@ -205,7 +210,7 @@ class DiarizationDataSet(Dataset):
 
     def __len__(self):
         return len(self.filelist)
-  
+
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
@@ -218,11 +223,11 @@ class DiarizationDataSet(Dataset):
 
         if self.transform:
             audio = self.transform(audio.detach().cpu().numpy())
-        
+
         # Window len and Window step in frames
         win_len = self.win_len*(self.sr//1000)
         win_step = self.win_step*(self.sr//1000)
-        
+
         if self.xvectors_dir != None:
             audio_segment_path = os.path.join(self.xvectors_dir, self.filelist[idx][:-4]+'.npy')
             audio_segments = torch.Tensor(np.load(audio_segment_path))
@@ -230,24 +235,24 @@ class DiarizationDataSet(Dataset):
             # Pad and create audio segments
             audio_vec = audio.reshape(1, audio.shape[0])
             audio_vec = F.pad(input=audio_vec, pad=(win_len//2, win_len//2, 0, 0), mode='constant', value=0)
-    
+
             audio_segments = []
             for i in range(win_len//2, audio_vec.shape[1]-win_len//2, win_step):
                 audio_segments.append(audio_vec[:, i-win_len//2:i+win_len//2])
-    
+
             audio_segments = torch.vstack(audio_segments)
-            
+
             # Compute ECAPA-TDNN x-vectors for the audio signal
             with torch.no_grad():
                 Xt = []
                 for i in range(audio_segments.shape[0]//self.batch_size_for_ecapa):
                     Xt.append(self.ECAPA.encode_batch(audio_segments[i*self.batch_size_for_ecapa:(i+1)*self.batch_size_for_ecapa])[:,0,:])
-        
+
                 if audio_segments.shape[0]%self.batch_size_for_ecapa != 0:
                     Xt.append(self.ECAPA.encode_batch(audio_segments[(audio_segments.shape[0]//self.batch_size_for_ecapa)*self.batch_size_for_ecapa:])[:,0,:])
-        
+
                 audio_segments = torch.vstack(Xt)
-            
+
         NumWin = len(audio_segments)
 
         # VAD timestamps
@@ -256,7 +261,7 @@ class DiarizationDataSet(Dataset):
             speech_timestamps = np.load(vad_path, allow_pickle=True)
         else:
             speech_timestamps = self.get_speech_ts(audio, self.vad_model, num_steps=self.vad_step)
-            
+
         speech_segments = torch.zeros(NumWin)
         for i in speech_timestamps:
             start = int(min((i['start']+win_step/2)//win_step, NumWin))
@@ -272,10 +277,10 @@ class DiarizationDataSet(Dataset):
             start = int(min((i[0]+win_step/2)//win_step, NumWin))
             end = int(min((i[1]+win_step/2)//win_step, NumWin))
             diarization_segments[start:end, i[2]] = 1
-            
+
         if self.use_oracle_vad:
             speech_segments, _ = torch.max(diarization_segments, axis=1)
-            
+
         if self.skip_overlap:
             speech_num_spkr = torch.sum(diarization_segments, axis=1)
             speech_segments[speech_num_spkr>1] = 0
@@ -288,7 +293,7 @@ class DiarizationDataSet(Dataset):
         '''
         spkCount = 0
         spkNames = {}
-    
+
         rttm_out = [] # returns list of list containing start frame, end frame, spkid
         with open(path, "r") as f:
             for line in f:
@@ -296,7 +301,7 @@ class DiarizationDataSet(Dataset):
                 indexes = [0, 1, 2, 5, 6, 8, 9]
                 for index in sorted(indexes, reverse=True):
                     del entry[index]
-    
+
                 entry[0] = int(float(entry[0])*self.sr) # Start frame
                 entry[1] = entry[0] + int(float(entry[1])*self.sr) # End frame
                 if entry[2] in spkNames.keys():
@@ -305,12 +310,12 @@ class DiarizationDataSet(Dataset):
                     spkNames[entry[2]] = spkCount
                     spkCount += 1
                     entry[2] = spkNames[entry[2]] # Label
-    
+
                 rttm_out.append(entry)
-                
+
             # Sort rttm list according to start frame
             rttm_out.sort(key = lambda x: x[0])
-    
+
         return np.array(rttm_out)
 
 def make_rttm(out_dir, name, labels, win_step):
@@ -351,25 +356,25 @@ def make_rttm(out_dir, name, labels, win_step):
     np.savetxt(out_dir + name + ".rttm", rttm_out, fmt='%s')
 
     return out_dir + name + ".rttm"
-    
+
 def get_metrics(groundtruth_path, hypothesis_path, collar=0.25, skip_overlap=True):
     '''
     groundtruth_path = directory of groundtruth rttm files
     hypothesis_path = directory of hypothesis rttm files
     '''
-    
+
     metric = DiarizationErrorRate(collar=collar, skip_overlap=skip_overlap)
-    
+
     gt_filepath = sorted(os.listdir(path = groundtruth_path))
     hp_filepath = sorted(os.listdir(path = hypothesis_path))
-    
+
     for filename in tqdm(hp_filepath):
         groundtruth = load_rttm(groundtruth_path + filename)[filename[:-5]]
         hypothesis = load_rttm(hypothesis_path + filename)[filename[:-5]]
         metric(groundtruth, hypothesis)
-    
+
     return metric
-    
+
 def plot_annot(name="IS1009a", collar=0.25, skip_overlap=True, groundtruth_path=None, hypothesis_path=None):
     hp_filepath = sorted(os.listdir(path = hypothesis_path))
     idx = np.argwhere(np.array(hp_filepath)==name+".rttm").item()
