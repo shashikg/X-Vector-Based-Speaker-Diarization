@@ -153,10 +153,10 @@ def createAnnotatedVideo(audio_dataset, hypothesis_dir):
             break
         
         # Get current speaker from hypothesis_labels array
-        if hypothesis_labels[curr_idx_hypo_array, 0] > max(0, frame_count - 25):
+        if hypothesis_labels[curr_idx_hypo_array, 0] > max(0, frame_count):
             currspk = "Speaker: None"
-        elif hypothesis_labels[curr_idx_hypo_array, 0] <= max(0, frame_count - 25) and\
-            hypothesis_labels[curr_idx_hypo_array, 1] >= max(0, frame_count - 25):
+        elif hypothesis_labels[curr_idx_hypo_array, 0] <= max(0, frame_count) and\
+            hypothesis_labels[curr_idx_hypo_array, 1] >= max(0, frame_count):
             currspk = "Speaker: " + spk_dict[hypothesis_labels[curr_idx_hypo_array, 2]]
         else:
             curr_idx_hypo_array = min(curr_idx_hypo_array + 1, len(hypothesis_labels) - 1)
