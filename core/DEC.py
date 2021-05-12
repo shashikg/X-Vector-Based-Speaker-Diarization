@@ -17,8 +17,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
-from utils import DiarizationDataSet, make_rttm
-import optimumSpeaker
+from core.utils import DiarizationDataSet, make_rttm
+import core.optimumSpeaker as optimumSpeaker
 
 warnings.filterwarnings('ignore')
 

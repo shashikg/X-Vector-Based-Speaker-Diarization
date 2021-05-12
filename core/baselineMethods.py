@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from spectralcluster import SpectralClusterer
 import shutil
 
-from utils import DiarizationDataSet, make_rttm
+from core.utils import DiarizationDataSet, make_rttm
 
 
 def diarizationOracleNumSpkrs(audio_dataset, method="KMeans", hypothesis_dir="./rttm_output/"):
