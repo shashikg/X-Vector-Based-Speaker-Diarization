@@ -35,7 +35,7 @@ Diarization Output Link: [here](http://www.youtube.com/watch?v=NH9Glqdu0gw "Demo
 
 https://user-images.githubusercontent.com/45726064/117953334-8d48e200-b333-11eb-9bab-3e6529b83f57.mp4
 
-![hypothesis](https://user-images.githubusercontent.com/45726064/117957270-8623d300-b337-11eb-9e4c-15751fb2ac9e.png)
+![hypothesis](https://user-images.githubusercontent.com/45726064/118474684-f3b17400-b728-11eb-83eb-c329722f9707.png)
 
 ## Live Demo on Google Colab
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1w1-BD2XLW3oz6kG5YqNZEMoalgIKqp8b?usp=sharing)
