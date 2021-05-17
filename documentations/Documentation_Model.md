@@ -1,5 +1,10 @@
 # Documentation: EE698R DEC based Diarization Model
 
+**Team Name:** TensorSlow
+
+**Members:** Aditya Singh ([@adityajaas](https://github.com/adityajaas)) and Shashi Kant Gupta ([@shashikg](https://github.com/shashikg))
+
+
 This speaker diarization model uses [Deep Embedding Clustering][dec] with a deep neural network initialized via 
 a Residual Autoencoder to assign speaker labels to segments of the raw audio signal.
 Clustering is perfomed on x-vectors extracted using [Desplanques et al.][desplanques]'s ECAPA-TDNN framework. 
@@ -7,31 +12,16 @@ We use [Silero-VAD][vad] for voice audio detection.
 
 **Baseline Model:** Spectral clustering is used for audio-label assignment.
 
-## DataSet
-Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files.
-
-## ipynb Notebook Files
-- **DEC_ResAE.ipynb:** To evaluate the DER score for the DEC models described in the report. Use the link available in Tutorial section to open it on google colab
-- **ExtractVAD.ipynb:** Used to extract and save all the VAD mapping for the audio files in VoxConverse dataset.
-- **ExtractXvectors.ipynb:** Used to precompute X-vectors for the audio files in VoxConverse dataset and save it into a zip file to use it in the DiarizationDataset.
-- **Baseline.ipynb:** To evaluate the DER score for the baseline models described in the report. Use the link available in the Tutorial section to open it on google colab.
-
-## Tutorial
-**DEC Speaker Diarization** \
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shashikg/speaker_diarization_ee698/blob/main/DEC_ResAE.ipynb)
-
-**Baseline Speaker Diarization** \
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shashikg/speaker_diarization_ee698/blob/main/Baseline.ipynb)
-
 ## API Documentation
 ### Index
-- [Defined in: utils.py](#utils.py)
-  - [class DiarizationDataset](#diarizationdataset)
-    - [func \_\_getitem\_\_](#getitem)
-    - [func read\_rttm](#read_rttm)
-  - [func make\_rttm](#make_rttm)
+ - [Defined in: utils.py](#utils.py)
+   - [class DiarizationDataset](#diarizationdataset)
+     - [func \_\_getitem\_\_](#getitem)
+     - [func read\_rttm](#read_rttm)
+   - [func make\_rttm](#make_rttm)
+   - [func get\_metrics](#get_metrics)
+   - [func plot\_annot](#plot_annot)
 - [Defined in: baselineMethods.py](#baselineMethods.py)
-  - [func get\_metrics](#get_metrics)
   - [func diarizationOracleNumSpkrs](#diarizationOracleNumSpkrs)
   - [func diarizationEigenGapNumSpkrs](#diarizationEigenGapNumSpkrs)
 - [Defined in: optimumSpeaker.py](#optimumSpeaker.py)
@@ -40,6 +30,7 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
     - [func compute\_affinity\_matrix](#computeaffinitymatrix)
     - [func compute\_sorted\_eigenvectors](#computesortedeigenvectors)
     - [func compute\_number\_of\_clusters](#computenumberofclusters)
+    - [func find](#find)
   - [class AffinityRefinementOperation](#affinityrefinementoperation)
     - [func check\_input](#checkinput)
     - [func refine](#refine)
@@ -65,33 +56,39 @@ Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). W
     - [func predict](#predict)
     - [func clusterAccuracy](#clusteraccuracy)
   - [func diarizationDEC](#diarizationDEC)
+- [Defined in: colab\_demo\_utils.py](#colab_demo_utils.py)
+  - [func downloadYouTube](#downloadYouTube)
+  - [func loadVideoFile](#loadVideoFile)
+  - [func read\_rttm](#read_rttm)
+  - [func combine\_audio](#combine_audio)
+  - [func createAnnotatedVideo](#createAnnotatedVideo)
 ---
 [//]: # (======================================================for utils.py=========================================================)
-## <a name =  'utils.py'></a> Defined in: utils.py
+# <a name =  'utils.py'></a> Defined in: utils.py
+
 ### <a name = 'diarizationdataset'></a> class DiarizationDataset() 
 _Defined in utils.py_
 ```sh
-class DiarizationDataset(root_dir='./audio/', 
-                 label_dir='./voxconverse/dev/',
-                 xvectors_dir=None,
-                 vad_dir=None,
+class DiarizationDataset(dataset_name=None
+                 data_dir=None, 
                  sr=16000, 
                  window_len=240, 
                  window_step=120, 
                  transform=None,
                  batch_size_for_ecapa=512,
                  vad_step=4,
-                 split='full')
+                 split='full',
+                 use_precomputed_vad= True,
+                 use_oracle_vad= False,
+                 skip_overlap= True)
 ```
-Create an abstract class for loading dataset. This class applies the necessary pre-processing and x-vector feature extraction methods to return the audio file as a bunch of segmented x-vector features to use it directly in the clustering algorithm to predict speaker labels. The module uses the pre-computed X-vectors if available otherwise extract it during the runtime.
+Create an abstract class for loading the dataset. This class applies the necessary pre-processing and x-vector feature extraction methods to return the audio file as a bunch of segmented x-vector features to use it directly in the clustering algorithm to predict speaker labels. The module uses the pre-computed X-vectors if available otherwise extract it during the runtime.
 
 **Parameters:**
 Argument                        | Detail
 ------------------------------- | ------------
-`root_dir:`                     |  _str_, Directory containing the audio wav files 
-`label_dir:`                    |  _str_, Directory containing the rttm label files
-`xvectors_dir:`                 |  _str_, Directory containing the precomputed xvectors for audio segments,<br /> default = None
-`vad_dir=None:`                 |  _str_, Directory containing the precomputer audio speech detection timestamps, <br /> default = None
+`dataset_name:`                 |  _str_, Name of the pre-existing dataset to use. Options: `ami`, `ami_dev`, `voxconverse`
+`data_dir:`                     |  _str_, Directory for any dataset other the options specified in `dataset_name`. <br />  Both `dataset_name` and `data_dir` cannot be None 
 `sr:`                           |  _int_, Sampling rate of the audio signal 
 `window_len:`                   |  _int_, Window length (in ms) of each of the audio segments to be passed for feature extraction
 `window_step:`                  |  _int_, Step (in ms) between two windows of audio segments to be passed for feature extraction
@@ -99,6 +96,9 @@ Argument                        | Detail
 `batch_size_for_ecapa:`         |  _int_, Batch size of audio segments while performing feature extraction using ECAPA-TDNN
 `vad_step:`                     |  _int_, Number of windows to split each audio chunk into. Argument used by Silero-VAD module
 `split:`                        |  _str_, Argument defining type of split of dataset, <br /> default = 'full' indicates no split
+`use_precomputed_vad:`           | _bool_, If True, downloads precomputed Voice Activity Detection label output for the dataset. Only available for dataset options specified in `dataset_name`
+`use_oracle_vad:`                | _bool_, If True, model does Voice Activity Detection directly from groundtruth rttm files bypassing the Silero VAD module.
+`skip_overlap:`                  | _bool_, If True, model skips the windows with multiple speakers speaking by inspecting the groundtruth rttm files
 
 **Class Functions:**
 
@@ -157,7 +157,7 @@ Variable                        | Detail
 ---
 ### <a name = 'get_metrics'></a> def get\_metrics()
 ```sh
-def get_metrics(groundtruth_path, hypothesis_path):
+def get_metrics(groundtruth_path, hypothesis_path, collar=0.25, skip_overlap=True):
 ```
 _Defined in utils.py_
 
@@ -168,6 +168,8 @@ Argument                        | Detail
 ------------------------------- | ------------
 `groundtruth_path:`             |  _str_, directory of groundtruth rttm files
 `hypothesis_path:`              |  _str_, directory of hypothesis rttm files
+`collar:`                        |  _float_, Duration (in seconds) of collars removed from evaluation around boundaries of reference segments
+`skip_overlap:`                  |  _bool_, If True, calculates Diarization Error Rate ignoring the overlapped region
 
 **Returns:**
 Variable                        | Detail
@@ -175,9 +177,30 @@ Variable                        | Detail
 `metric:`                       |  _pyannote.metrics_, Pyannote metric class having diarization DERs for all the files.
 
 ---
+
+### <a name = 'plot_annot'></a> def plot\_annot()
+```sh
+def plot_annot(name="IS1009a", collar=0.25, skip_overlap=True, groundtruth_path=None, hypothesis_path=None):
+```
+_Defined in utils.py_
+
+Calculate the Diarization Error Rate for filename specified, and print the groundtruth and hypothesis time series plot.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`name:`                         |  _str_, Name of the file whose time series plot is to be generated. File must be present in the `hypothesis_path` folder
+`collar:`                        |  _float_, Duration (in seconds) of collars removed from evaluation around boundaries of reference segments
+`skip_overlap:`                  |  _bool_, If True, calculates Diarization Error Rate ignoring the overlapped region
+`groundtruth_path:`             |  _str_, Directory of groundtruth rttm files
+`hypothesis_path:`              |  _str_, Directory of hypothesis rttm files
+
+---
+---
 [//]: # (===================================================for baselineMethods.py======================================================)
 
-## <a name = 'baselineMethods.py'></a> Defined in baselineMethods.py
+# <a name = 'baselineMethods.py'></a> Defined in baselineMethods.py
+
 ### <a name = 'diarizationOracleNumSpkrs'></a> def diarizationOracleNumSpkrs()
 ```sh
 def diarizationOracleNumSpkrs(audio_dataset, method="KMeans"):
@@ -219,8 +242,9 @@ Variable                        | Detail
 ---
 [//]: # (==================================================for optimumSpeaker.py=====================================================)
 
-## <a name = 'optimumSpeaker.py'></a> Defined in optimumSpeaker.py
+# <a name = 'optimumSpeaker.py'></a> Defined in optimumSpeaker.py
 Inspired from [https://github.com/wq2012/SpectralCluster](https://github.com/wq2012/SpectralCluster)
+
 ### <a name = 'eigengap'></a> class eigengap()
 ```sh
 class eigengap(min_clusters=1, 
@@ -249,7 +273,9 @@ Argument                        | Detail
 **Class Functions:**
 
 1. <a name = 'getrefinementoperator'></a> **\_get\_refinement\_operator:**
-```def _get_refinement_operator(self, name)```
+```sh
+def _get_refinement_operator(self, name)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -262,7 +288,9 @@ Variable                                                                        
  `CropDiagonal()`/`GaussianBlur()`/<br>`RowWiseThreshold()`/`Symmetrize()`/ <br>`Diffuse()`/`RowWiseNormalize()`   | _optimumSpeaker.AffinityRefinementOperation_, Returns specified refinement method class
 
 2. <a name = 'computeaffinitymatrix'></a> **compute\_affinity\_matrix:**
-```def compute_affinity_matrix(self, X)```
+```sh
+def compute_affinity_matrix(self, X)
+```
 Compute the affinity matrix for a matrix X with row as each instance and column as features by calculating cosine similarity between pair of l2 normalized columns of X
 
 **Parameters:**
@@ -276,7 +304,9 @@ Variable                        | Detail
 `affinity:`                     |  _numpy.ndarray_, (n_windows, n_windows) Symmetric array with (i,j)th value equal to cosine similiarity between i-th and j-th row
 
 3. <a name = 'computesortedeigenvectors'></a> **compute\_sorted\_eigenvectors:**
-```def compute_sorted_eigenvectors(self, A)```
+```sh
+def compute_sorted_eigenvectors(self, A)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -290,7 +320,9 @@ Variable                        | Detail
 `v:`                            |  _numpy.ndarray_, Eigen vectors corresponding to eigen values returned
 
 4. <a name = 'computenumberofclusters'></a> **compute\_number\_of\_clusters:**
-```def compute_number_of_clusters(self, eigenvalues, max_clusters, stop_eigenvalue)```
+```sh
+def compute_number_of_clusters(self, eigenvalues, max_clusters, stop_eigenvalue)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -303,6 +335,21 @@ Argument                        | Detail
 Variable                        | Detail
 ------------------------------- | ------------
 `max_delta_index:`              |  _int_, Index to the eigenvalue such that eigen gap is maximized. It gives the number of clusters determined by the function
+
+5. <a name = 'find'></a> **find**
+```sh
+def find(self, X)
+```
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`X:`                            |  _numpy.ndarray_, (n_windows, n_features) Input matrix with column as features to compute affinity matrix between pair of columns
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`k:`                            |  _int_, Number of clusters calculated after creating the affinity matrix, applying refinements, and using eigen-gap maximization. `self.min_clusters` ≤ `k` ≤ `self.max_clusters`
 
 ---
 
@@ -317,7 +364,9 @@ Meta class to the refinement operation classes passed as input to be perfomed on
 **Class Functions:**
 
 1. <a name = 'checkinput'></a> **check\_input:**
-```def check_input(self, X)```
+```sh
+def check_input(self, X)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -330,7 +379,9 @@ Variable                        | Detail
 `ValueError()`\ `TypeError()` | _ValueError/TypeError_, Type Error if X is not a numpy array. Value error if X is not a 2D square matrix
 
 2. <a name = 'refine'></a> **refine:**
-```def refine(self, X)```
+```sh
+def refine(self, X)
+```
 Abstract function redefined in various child classes of class AffinityRefinementOperation
 
 **Parameters:**
@@ -352,7 +403,9 @@ This also helps to avoid the bias during Gaussian blur and normalization.
 **Class Functions:**
 
 1. <a name = 'refineCropdiagonal'></a> **refine:**
-```def refine(self, X)```
+```sh
+def refine(self, X)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -383,7 +436,9 @@ Argument                        | Detail
 **Class Functions:**
 
 1. <a name = 'refinegaussianblur'></a> **refine:**
-```def refine(self, X)```
+```sh
+def refine(self, X)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -419,7 +474,9 @@ Argument                        | Detail
 **Class Functions:**
 
 1. <a name = 'refinerowwisethreshold'></a> **refine:**
-```def refine(self, X)```
+```sh
+def refine(self, X)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -444,7 +501,9 @@ Operator to return a symmetric matrix based on max{ X, X<sup>T</sup> } from a gi
 **Class Functions:**
 
 1. <a name = 'refinesymmetrize'></a> **refine:**
-```def refine(self, X)```
+```sh
+def refine(self, X)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -469,7 +528,9 @@ Operator to return a diffused symmetric matrix X<sup>T</sup>X from a given input
 **Class Functions:**
 
 1. <a name = 'refinediffuse'></a> **refine:**
-```def refine(self, X)```
+```sh
+def refine(self, X)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -493,7 +554,9 @@ Operator to normalize each row of input matrix X by the maximum value in the cor
 **Class Functions:**
 
 1. <a name = 'refinerowwisenormalize'></a> **refine:**
-```def refine(self, X)```
+```sh
+def refine(self, X)
+```
 
 **Parameters:**
 Argument                        | Detail
@@ -508,15 +571,16 @@ Variable                        | Detail
 ---
 
 [//]: # (======================================================for DEC.py=========================================================)
-## <a name = 'DEC.py'></a> Defined in DEC.py
+# <a name = 'DEC.py'></a> Defined in DEC.py
+
 ### <a name = 'residualautoencoder'></a> class ResidualAutoEncoder()
 ```sh
-class ResidualAutoEncoder(ip_features, 
+class ResidualAutoEncoder(ip_features,
                           hidden_dims=[500, 500, 2000, 30]))
 ```
 _Defined in DEC.py_
 
-Create a torch.nn.Module for a deep autoencoder composed of Residual Neural Network (ResNet) bloacks as the encoder and decoder layer. Activation used is ReLU. The bottleneck encoder output and final decoder output are not activated to avoid data loss due to ReLU activation. 
+Create a torch.nn.Module for a deep autoencoder composed of Residual Neural Network (ResNet) bloacks as the encoder and decoder layer. Activation used is ReLU. The bottleneck encoder output and final decoder output are not activated to avoid data loss due to ReLU activation.
 
 **Parameters:**
 Argument                        | Detail
@@ -527,7 +591,7 @@ Argument                        | Detail
 **Returns:**
 Variable                        | Detail
 ------------------------        | -----------
-`z:`                            | _torch.Tensor_, Output from the bottle encoder of the deep autoencoder network. 
+`z:`                            | _torch.Tensor_, Output from the bottle encoder of the deep autoencoder network.
 `xo:`                           | _list of torch.Tensor_, Output from each encoder except the bottle encoder of the deep autoencoder. First item of the list is the input given to the system.
 `xr:`                           | _list of torch.Tensor_, Reconstruction of inputs to each encoder layer of autoencoder. xr is reversed so that i-th item in list xr is the reconstruction of i-th item in list xo. Eg. First item of xo is the input to the ResidualAutoEncoder network, and first item of xr is the reconstruction from the ResidualAutoEncoder network.
 
@@ -538,7 +602,7 @@ def load_encoder():
 ```
 _Defined in DEC.py_
 
-Load weights from the ResidualAutoEncoder trained on the training data. 
+Load weights from the ResidualAutoEncoder trained on the training data.
 
 **Returns:**
 Variable                        | Detail
@@ -549,9 +613,9 @@ Variable                        | Detail
 ### <a name = 'clusteringmodule'></a> class ClusteringModule()
 ```sh
 class ClusteringModule(nn.Module):
-    def __init__(self, 
-                 num_clusters, 
-                 encoder, data, 
+    def __init__(self,
+                 num_clusters,
+                 encoder, data,
                  cinit = "KMeans"):
 ```
 _Defined in DEC.py_
@@ -577,8 +641,8 @@ Variable                        | Detail
 
 1. <a name = 'initcentroid'></a> **init\_centroid:**
 ```sh
-def init_centroid(self, 
-                  data, 
+def init_centroid(self,
+                  data,
                   method = "KMeans")
 ```
 Returns clustered data after calculating the optimal number of speakers using eigen-gap method, and then clustering the data based on the method specified.
@@ -597,9 +661,9 @@ Variable                        | Detail
 ---
 ### <a name = 'dec'></a> class DEC()
 ```sh
-class DEC(self, 
-          num_clusters, 
-          encoder, data, 
+class DEC(self,
+          num_clusters,
+          encoder, data,
           cinit = "KMeans"):
 ```
 _Defined in DEC.py_
@@ -618,8 +682,8 @@ Argument                        | Detail
 
 1. <a name = 'fit'></a> **fit:**
 ```sh
-def fit(self, 
-        data, 
+def fit(self,
+        data,
         y_true = None,
         niter = 150,
         lrEnc = 1e-4,
@@ -686,7 +750,7 @@ Compute diarization labels based on oracle number of speakers if `num_spkr = 'or
 **Parameters:**
 Argument                        | Detail
 ------------------------------- | ------------
-`audio_dataset:`                |  _utils.DiarizationDataset_, Test diarization dataset 
+`audio_dataset:`                |  _utils.DiarizationDataset_, Test diarization dataset
 `num_spkr:`                     |  _str_,  `None` for calculating the optimal number of speakers from eigen-gap maximization. `oracle` for using the number of speakers in each window given with the data.
 `hypothesis_dir:`               |  _str_, Directory to store the predicted speaker labels in the audio segments in an rttm file. `None` stores it in `./rttm_output/` directory
 
@@ -696,6 +760,107 @@ Variable                        | Detail
 `hypothesis_dir:`               |  _str_, Directory to the rttm files containing predicted speaker labels with their timestamps
 
 ---
+# <a name =  'colab_demo_utils.py'></a> Defined in: colab\_demo\_utils.py
+
+### <a name = 'downloadYouTube'></a> def downloadYouTube()
+```sh
+def downloadYouTube(videourl, path):
+```
+_Defined in colab\_demo\_utils.py_
+
+Download video from YouTube in .mp4 format using Video URL.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`videourl:`                     |  _str_, URL of the YouTube video to download
+`path:`                         |  _str_, directory to save the YouTube video. If directory does not exist, it is created.
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`save_dir:`                     |  _str_, Save directory location
+
+---
+
+### <a name = 'loadVideoFile'></a> def loadVideoFile()
+```sh
+def loadVideoFile(playvideo_file=False):
+```
+_Defined in colab\_demo\_utils.py_
+
+Load video file either from YouTube or from your local directory into your current session working directory. Also extracts and stores its audio file in .wav format.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`playvideo_file:`               |  _bool_, If True, plays the video after loading in the working directory. Default=`False`
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`video_dir:`                    |  _str_, Returns the path to the saved video
+
+---
+
+### <a name = 'read_rttm'></a> def read\_rttm()
+```sh
+def read_rttm(path):
+```
+_Defined in colab\_demo\_utils.py_
+
+Create hypothesis labels for each window using .rttm file.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`path:`                         |  _str_, Path to the rttm file
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`hypothesis_labels:`            |  _numpy.ndarray_, (n_instances, 3) i-th row's first, second and third column contains start, end, and speaker id of the i-th instance of speech.
+
+---
+
+### <a name = 'combine_audio'></a> def combine\_audio()
+```sh
+def combine_audio(vidname, audname, outname, fps):
+```
+_Defined in colab\_demo\_utils.py_
+
+Combine cv2 processed silent video with its audio file to output the complete annotated video.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`vidname:`                      |  _str_, Path to the silent video
+`audname:`                      |  _str_, Path to the audio file to be attached
+`outname:`                      |  _str_, Output video file name
+`fps:`                          |  _int_, Frame rate of the video
+---
+
+### <a name = 'createAnnotatedVideo'></a> def createAnnotatedVideo()
+```sh
+def createAnnotatedVideo(audio_dataset, hypothesis_dir):
+```
+_Defined in colab\_demo\_utils.py_
+
+Use cv2 to put annotations in the video using the hypothesis labels.
+
+**Parameters:**
+Argument                        | Detail
+------------------------------- | ------------
+`audio_dataset:`                 |  _utils.DiarizationDataset_, Dataset pipeline
+`hypothesis_dir:`               |  _str_, Path to the directory with hypothesis labels rttm files
+
+**Returns:**
+Variable                        | Detail
+------------------------------- | ------------
+`op_video_name:`                |  _str_, Annotated output video filename
+
+---
+
 [//]: #
 [dec]: <https://arxiv.org/abs/1511.06335>
 [desplanques]: <https://arxiv.org/abs/2005.07143v1>
