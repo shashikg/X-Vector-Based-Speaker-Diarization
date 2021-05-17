@@ -1,13 +1,12 @@
 # Deep Embedding Clustering for Speaker Diarization
 
-Course project for EE698 (2020-21 Sem 2)
+**Team Name:** TensorSlow
+**Members:** Aditya Singh ([@adityajaas][https://github.com/adityajaas]) and Shashi Kant Gupta ([@shashikg][https://github.com/shashikg])
 
 This speaker diarization model uses [Deep Embedding Clustering][dec] with a deep neural network initialized via
-a Autoencoder to assign speaker labels to segments of the raw audio signal.
-Clustering is perfomed on x-vectors extracted using [Desplanques et al.][desplanques]'s ECAPA-TDNN framework.
-We use [Silero-VAD][vad] for voice audio detection.
+an Autoencoder to assign speaker labels to segments of the raw audio signal. Clustering is perfomed on x-vectors extracted using [Desplanques et al.][desplanques]'s ECAPA-TDNN framework. We use [Silero-VAD][vad] for voice audio detection.
 
-**Baseline Model:** Spectral clustering is used for audio-label assignment.
+Report is available [here](EE698R_TensorSlow_report.pdf). It contains 4 pages of main text + 1 references page + 2 pages of supplementary materials.
 
 ## DataSet
 Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files. We also tested the model on [AMI](https://groups.inf.ed.ac.uk/ami/corpus/) test dataset (total 16 audio files).
@@ -37,16 +36,18 @@ https://user-images.githubusercontent.com/45726064/117953334-8d48e200-b333-11eb-
 
 ![hypothesis](https://user-images.githubusercontent.com/45726064/117957270-8623d300-b337-11eb-9e4c-15751fb2ac9e.png)
 
-## ipynb Notebook Files
-- **DEC_ResAE.ipynb:** To evaluate the DER score for the DEC models described in the report. Use the link available in Tutorial section to open it on google colab
-- **ExtractVAD.ipynb:** Used to extract and save all the VAD mapping for the audio files in VoxConverse dataset.
-- **ExtractXvectors.ipynb:** Used to precompute X-vectors for the audio files in VoxConverse dataset and save it into a zip file to use it in the DiarizationDataset.
-- **Baseline.ipynb:** To evaluate the DER score for the baseline models described in the report. Use the link available in the Tutorial section to open it on google colab.
-
 ## Live Demo on Google Colab
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1w1-BD2XLW3oz6kG5YqNZEMoalgIKqp8b?usp=sharing)
 
+## ipynb Notebook Files
+- **Baseline<DATASET_NAME>.ipynb:** To evaluate the DER score for the baseline models described in the report.
+- **Compare_Spectral_vs_DEC_<DATASET_PARAM>.ipynb:** To evaluate the DER score for the DEC models described in the report and compare it against the Spectral clustering method.
+- **TrainAutoEncoder.ipynb:** Output notebook file for training the AutoEncoder of the DEC model.
+- **ExtractVAD.ipynb:** Used to extract and save all the VAD mapping for the audio files.
+- **ExtractXvectors.ipynb:** Used to precompute X-vectors for the audio files and save it into a zip file to use it in the DiarizationDataset.
+
 ## API Documentation
+Documentation and details about functions isnide the core module.
 ### Index
 
 - [Defined in: utils.py](documentations/Documentation_Model.md/#utils.py)
