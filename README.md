@@ -6,13 +6,18 @@
 
 **Report:** It is available [here](EE698R_TensorSlow_report.pdf). It contains 4 pages of main text + 1 references page + 2 pages of supplementary materials.
 
-This speaker diarization model uses [Deep Embedding Clustering][dec] with a deep neural network initialized via
-an Autoencoder to assign speaker labels to segments of the raw audio signal. Clustering is perfomed on x-vectors extracted using [Desplanques et al.][desplanques]'s ECAPA-TDNN framework. We use [Silero-VAD][vad] for voice audio detection.
+## Abstract
+
+Speaker diarization has received significant interest within the speech community due to its promise to improve automatic speech transcription considerably. Commonly used approach to this problem include using embedding vectors such as d-vectors, i-vectors, or x-vectors with Spectral Clustering. We propose using [Unsupervised Deep Embedding Clustering][dec] to cluster data in a more semantically meaningful latent representation with pre-trained Auto Encoders for improved imbalanced data separation. Stacked layers of Auto Encoders have been trained in a residual fashion in place of De-noising Auto Encoders for enhanced learning. We use VoxConverse and AMI Corpus split datasets to test our model. Our model shows considerable improvement over the Spectral Clustering approach. Clustering is perfomed on x-vectors extracted using [Desplanques et al.][desplanques]'s ECAPA-TDNN framework. We use [Silero-VAD][vad] for voice audio detection.
+
+## Live Demo on Google Colab
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shashikg/speaker_diarization_ee698/blob/main/DemoOnVideo.ipynb)
 
 ## DataSet
 Model is tested on [VoxConverse][voxconverse] dataset (total 216 audio files). We randomly split the dataset into two parts: ‘test’ and ‘train’ with test data having 50 audio files. We also tested the model on [AMI](https://groups.inf.ed.ac.uk/ami/corpus/) test dataset (total 16 audio files).
 
 ## Results
+
 ### VoxConverse
 Methods                          |     DER
 -------------------------------  | -----------
@@ -20,6 +25,8 @@ Spectral Clustering              | 17.76
 Ours                             | 12.99
 Spectral Clustering (Oracle VAD) | 17.98
 **Ours (Oracle VAD)**            | **11.70**
+
+---
 
 ### AMI Corpus
 Methods                          |     DER
@@ -29,6 +36,8 @@ Ours                             | 23.39
 Spectral Clustering (Oracle VAD) | 14.96
 **Ours (Oracle VAD)**            | **13.14**
 
+---
+
 ### Demo on random YouTube file
 Original Video Link: [here](https://www.youtube.com/watch?v=4-mvb-8FHPo)\
 Diarization Output Link: [here](http://www.youtube.com/watch?v=NH9Glqdu0gw "Demo Speaker Diarization by Team TensorSlow")
@@ -37,8 +46,7 @@ https://user-images.githubusercontent.com/45726064/117953334-8d48e200-b333-11eb-
 
 ![hypothesis](https://user-images.githubusercontent.com/45726064/118474684-f3b17400-b728-11eb-83eb-c329722f9707.png)
 
-## Live Demo on Google Colab
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shashikg/speaker_diarization_ee698/blob/main/DemoOnVideo.ipynb)
+---
 
 ## ipynb Notebook Files
 - **Baseline<DATASET_NAME>.ipynb:** To evaluate the DER score for the baseline models described in the report.
