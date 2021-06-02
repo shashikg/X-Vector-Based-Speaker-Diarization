@@ -38,7 +38,7 @@ https://user-images.githubusercontent.com/45726064/117953334-8d48e200-b333-11eb-
 ![hypothesis](https://user-images.githubusercontent.com/45726064/118474684-f3b17400-b728-11eb-83eb-c329722f9707.png)
 
 ## Live Demo on Google Colab
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1w1-BD2XLW3oz6kG5YqNZEMoalgIKqp8b?usp=sharing)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shashikg/speaker_diarization_ee698/blob/main/DemoOnVideo.ipynb)
 
 ## ipynb Notebook Files
 - **Baseline<DATASET_NAME>.ipynb:** To evaluate the DER score for the baseline models described in the report.
